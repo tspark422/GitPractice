@@ -4,8 +4,9 @@ myPFI <- function(dat, M=100, max.iter=50, eps=1e-09){
   idx2 <- which(dat$delta2==0)
   
   # Assign index set correspond to delta
-  idx_A10 <- which(dat$delta2==0 & dat$delta1!=0)
-  idx_A01 <- which(dat$delta1==0 & dat$delta2!=0)
+  idx_A11 <- which(dat$delta1==1 & dat$delta2==1)
+  idx_A10 <- which(dat$delta1==1 & dat$delta2==0)
+  idx_A01 <- which(dat$delta1==0 & dat$delta2==1)
   idx_A00 <- which(dat$delta1==0 & dat$delta2==0)
   
   # Obtain initial coefficients of beta and sigma using observed y1 only
@@ -31,22 +32,19 @@ myPFI <- function(dat, M=100, max.iter=50, eps=1e-09){
   
   # EM algorithm
   phi_old <- init_phi; beta_old <- init_beta; sigma2_old <- init_sigma2
-  idx_A10_weight <- idat$id %in% idx_A10; idx_A01_weight <- idat$id %in% idx_A01; idx_A00_weight <- idat$id %in% idx_A00
+  fully_obs_idx <- idat$id %in% idx_A11
   pi_denom <- exp(init_phi[1]+init_phi[2]*idat$x+init_phi[3]*idat$y1_mis)/(1+exp(init_phi[1]+init_phi[2]*idat$x+init_phi[3]*idat$y1_mis))
   for(iter in 1:max.iter){
     if(eps < 1e-09) break()
     # E-step(Weighting)
     pi_num <- exp(phi_old[1]+phi_old[2]*idat$x+phi_old[3]*idat$y1_mis)/(1+exp(phi_old[1]+phi_old[2]*idat$x+phi_old[3]*idat$y1_mis))
-    idat$weight[idx_A10_weight] <- pi_num[idx_A10_weight]^(idat$y2_mis[idx_A10_weight])*(1-pi_num[idx_A10_weight])^(1-idat$y2_mis[idx_A10_weight])/
-      (pi_denom[idx_A10_weight]^(idat$y2_mis[idx_A10_weight])*(1-pi_denom[idx_A10_weight])^(1-idat$y2_mis[idx_A10_weight]))
-    idat$weight[idx_A01_weight] <- dnorm(idat$y1_mis[idx_A01_weight], mean=beta_old[1]+beta_old[2]*idat$x[idx_A01_weight], sd=sqrt(sigma2_old))*pi_num[idx_A01_weight]^(idat$y2_mis[idx_A01_weight])*(1-pi_num[idx_A01_weight])^(1-idat$y2_mis[idx_A01_weight])/
-      (dnorm(idat$y1_mis[idx_A01_weight], mean=init_beta[1]+init_beta[2]*idat$x[idx_A01_weight], sd=sqrt(init_sigma2)))
-    idat$weight[idx_A00_weight] <- dnorm(idat$y1_mis[idx_A00_weight], mean=beta_old[1]+beta_old[2]*idat$x[idx_A00_weight], sd=sqrt(sigma2_old))*pi_num[idx_A00_weight]^(idat$y2_mis[idx_A00_weight])*(1-pi_num[idx_A00_weight])^(1-idat$y2_mis[idx_A00_weight])/
-      (dnorm(idat$y1_mis[idx_A00_weight], mean=init_beta[1]+init_beta[2]*idat$x[idx_A00_weight], sd=sqrt(init_sigma2))*pi_denom[idx_A00_weight]^(idat$y2_mis[idx_A00_weight])*(1-pi_denom[idx_A00_weight])^(1-idat$y2_mis[idx_A00_weight]))
+    mis_weight <- dnorm(idat$y1_mis[!fully_obs_idx], mean=beta_old[1]+beta_old[2]*idat$x[!fully_obs_idx], sd=sqrt(sigma2_old))*pi_num[!fully_obs_idx]^(idat$y2_mis[!fully_obs_idx])*(1-pi_num[!fully_obs_idx])^(1-idat$y2_mis[!fully_obs_idx])/
+      (dnorm(idat$y1_mis[!fully_obs_idx], mean=init_beta[1]+init_beta[2]*idat$x[!fully_obs_idx], sd=sqrt(init_sigma2))*pi_denom[!fully_obs_idx]^(idat$y2_mis[!fully_obs_idx])*(1-pi_denom[!fully_obs_idx])^(1-idat$y2_mis[!fully_obs_idx]))
     
-    for (k in 1:n){
-      idat$weight[idat$id==k] <- idat$weight[idat$id==k]/sum(idat$weight[idat$id==k])
-    }
+    # normalize weight
+    mis_weight_matrix <- matrix(mis_weight, nrow=M)
+    mis_weight_matrix_normalized <- mis_weight_matrix/rep(colSums(mis_weight_matrix), each=M)
+    idat$weight[!fully_obs_idx] <- c(mis_weight_matrix_normalized)
     
     # M-step(Maximizing)
     # beta
@@ -77,8 +75,8 @@ myPFI <- function(dat, M=100, max.iter=50, eps=1e-09){
       U_logis_23 <- sum(idat$weight*pi_logis_old*(1-pi_logis_old)*idat$x*idat$y1_mis)
       U_logis_33 <- sum(idat$weight*pi_logis_old*(1-pi_logis_old)*idat$y1_mis^2)
       information = matrix(c(U_logis_11, U_logis_12, U_logis_13, U_logis_12, U_logis_22, U_logis_23, U_logis_13, U_logis_23, U_logis_33), nrow=3) # Information matrix
-      pi_new = phi_old_NR + solve(information)%*%c(score_logis_1, score_logis_2, score_logis_3)   # Newton-Raphson method
-      eps_logis = norm(pi_new-phi_old_NR, type='2')
+      phi_new = phi_old_NR + solve(information)%*%c(score_logis_1, score_logis_2, score_logis_3)   # Newton-Raphson method
+      eps_logis = norm(phi_new-phi_old_NR, type='2')
       phi_old_NR=phi_new
     }
     eps=norm(c(beta_new-beta_old, sigma2_new-sigma2_old, phi_new-phi_old), type='2')
