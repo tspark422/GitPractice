@@ -1,6 +1,5 @@
 # Data simulation
 n=200
-M=100
 x <- rnorm(n, 2, 1)
 p <- exp(x/2)/(1+exp(x/2))
 delta1 <- rbinom(n, 1, p)
