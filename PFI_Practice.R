@@ -122,7 +122,8 @@ myPFI_prac <- function(n, beta, sigma, phi, M=100, max.iter=50, eps=1e-09, B=200
     
     ### estimate for eta1 ###
     # Calculate double sigma w_iw_{ij}^{*}(s-s_{i})*g(y_{ij}^{*}) for eta1
-    common_term <- idat$weight*idat$y1_mis
+    g1 <- idat$y1_mis # estimating function for eta1
+    common_term <- idat$weight*g1
     c1 <- sum(common_term*(idat$score_1_ij-rep(score_mean_i[1, ], each=M)))
     c2 <- sum(common_term*(idat$score_2_ij-rep(score_mean_i[2, ], each=M)))
     c3 <- sum(common_term*(idat$score_3_ij-rep(score_mean_i[3, ], each=M)))
@@ -143,14 +144,15 @@ myPFI_prac <- function(n, beta, sigma, phi, M=100, max.iter=50, eps=1e-09, B=200
     e_i_eta1 <- matrix(colSums(matrix(idat$weight*(idat$y1_mis+crossprod(K_1_eta1, score_mat)), nrow=M)), ncol=1)
     
     ### results for eta1 ###
-    eta1 <- sum(idat$weight*idat$y1_mis)/n  # point estimator of eta1 
+    eta1 <- sum(1/n*idat$weight*idat$y1_mis)  # point estimator of eta1 
     est_impvar1 <- as.numeric(crossprod(e_i_eta1)/(n*(n-1)) - (sum(e_i_eta1))^2/(n^2*(n-1))) # variance estimator of eta1 using linearization (eq. (13))
     est_compvar1 <- as.numeric(crossprod(data$y1)/(n*(n-1)) - (sum(data$y1)^2/(n^2*(n-1))))  # Variance estimator of eta1 using complete sample
     
     
     ### estimate eta2 ###
     # Calculate double sigma in K_1
-    common_term <- idat$weight*idat$y2_mis
+    g2 <- idat$y2_mis
+    common_term <- idat$weight*g2
     c1 <- sum(common_term*(idat$score_1_ij-rep(score_mean_i[1, ], each=M)))
     c2 <- sum(common_term*(idat$score_2_ij-rep(score_mean_i[2, ], each=M)))
     c3 <- sum(common_term*(idat$score_3_ij-rep(score_mean_i[3, ], each=M)))
@@ -163,13 +165,36 @@ myPFI_prac <- function(n, beta, sigma, phi, M=100, max.iter=50, eps=1e-09, B=200
     e_i_eta2 <- matrix(colSums(matrix(idat$weight*(idat$y2_mis+crossprod(K_1_eta2, score_mat)), nrow=M)), ncol=1)
     
     ### results for eta2 ###
-    eta2 <- sum(idat$weight*idat$y2_mis)/n     # point estimator of eta2
-    est_impvar2 <- as.numeric(crossprod(e_i_eta2)/(n*(n-1)) - (sum(e_i_eta2))^2/(n^2*(n-1))) # variance estimator of eta1 using linearization (eq. (13))
-    est_compvar2 <- as.numeric(crossprod(data$y2)/(n*(n-1)) - (sum(data$y2)^2/(n^2*(n-1))))  # Variance estimator of eta1 using complete sample
+    eta2 <- sum(1/n*idat$weight*idat$y2_mis)     # point estimator of eta2
+    est_impvar2 <- as.numeric(crossprod(e_i_eta2)/(n*(n-1)) - (sum(e_i_eta2))^2/(n^2*(n-1))) # variance estimator of eta2 using linearization (eq. (13))
+    est_compvar2 <- as.numeric(crossprod(data$y2)/(n*(n-1)) - (sum(data$y2)^2/(n^2*(n-1))))  # Variance estimator of eta2 using complete sample
+    
+    ### estimate eta3 ###
+    # Calculate double sigma in K_1
+    g3 <- (idat$x-mean(idat$x))*(idat$y1_mis-mean(idat$y1_mis))/sum((idat$x-mean(idat$x))^2)*n*M
+    g_comp <- (data$x-mean(data$x))*(data$y1-mean(data$y1))/sum((data$x-mean(data$x))^2)*n
+    common_term <- idat$weight*g3
+    # common_term <- idat$weight*as.numeric(Sxy/Sxx)
+    c1 <- sum(common_term*(idat$score_1_ij-rep(score_mean_i[1, ], each=M)))
+    c2 <- sum(common_term*(idat$score_2_ij-rep(score_mean_i[2, ], each=M)))
+    c3 <- sum(common_term*(idat$score_3_ij-rep(score_mean_i[3, ], each=M)))
+    c4 <- sum(common_term*(idat$score_4_ij-rep(score_mean_i[4, ], each=M)))
+    c5 <- sum(common_term*(idat$score_5_ij-rep(score_mean_i[5, ], each=M)))
+    c6 <- sum(common_term*(idat$score_6_ij-rep(score_mean_i[6, ], each=M)))
+    double_sig_eta3 <- c(c1, c2, c3, c4, c5, c6)/n
+    
+    K_1_eta3 <- first_term%*%double_sig_eta3
+    e_i_eta3 <- matrix(colSums(matrix(idat$weight*(g3+crossprod(K_1_eta3, score_mat)), nrow=M)), ncol=1)
+    
+    ### results for eta3 ###
+    eta3 <- sum(1/n*idat$weight*g3)     # point estimator of eta2
+    est_impvar3 <- as.numeric(crossprod(e_i_eta3)/(n*(n-1)) - (sum(e_i_eta3))^2/(n^2*(n-1))) # variance estimator of eta3 using linearization (eq. (13))
+    est_compvar3 <- as.numeric(crossprod(g_comp)/(n*(n-1)) - ((sum(g_comp))^2/(n^2*(n-1))))  # Variance estimator of eta3 using complete sample
     
     ### estimate for eta4 ###
     # Calculate double sigma in K_1
-    common_term <- idat$weight*as.numeric(idat$y1_mis<3)
+    g4 <- as.numeric(idat$y1_mis<3)
+    common_term <- idat$weight*g4
     c1 <- sum(common_term*(idat$score_1_ij-rep(score_mean_i[1, ], each=M)))
     c2 <- sum(common_term*(idat$score_2_ij-rep(score_mean_i[2, ], each=M)))
     c3 <- sum(common_term*(idat$score_3_ij-rep(score_mean_i[3, ], each=M)))
@@ -177,34 +202,34 @@ myPFI_prac <- function(n, beta, sigma, phi, M=100, max.iter=50, eps=1e-09, B=200
     c5 <- sum(common_term*(idat$score_5_ij-rep(score_mean_i[5, ], each=M)))
     c6 <- sum(common_term*(idat$score_6_ij-rep(score_mean_i[6, ], each=M)))
     double_sig_eta4 <- c(c1, c2, c3, c4, c5, c6)/n
-    
+
     K_1_eta4 <- first_term%*%double_sig_eta4
     e_i_eta4 <- matrix(colSums(matrix(idat$weight*(as.numeric(idat$y1_mis<3)+crossprod(K_1_eta4, score_mat)), nrow=M)), ncol=1)
     
     ### results for eta4 ###
-    eta4 <- sum(idat$weight*(idat$y1_mis<3))/n # point estimator of eta4
+    eta4 <- sum(1/n*idat$weight*(idat$y1_mis<3)) # point estimator of eta4
     est_impvar4 <- as.numeric(crossprod(e_i_eta2)/(n*(n-1)) - (sum(e_i_eta2))^2/(n^2*(n-1))) # variance estimator of eta1 using linearization (eq. (13))
     est_compvar4 <- as.numeric(crossprod(data$y1<3)/(n*(n-1)) - (sum(data$y1<3)^2/(n^2*(n-1))))  # Variance estimator of eta1 using complete sample
     
     rst.eta1[a, ] = c(eta1, est_impvar1, est_compvar1)
     rst.eta2[a, ] = c(eta2, est_impvar2, est_compvar2)
-    rst.eta3[a, ] = c(beta_new[2], 1, 1)
-    rst.eta4[a, ] = round(c(eta4, est_impvar4, est_compvar4), 5)
+    rst.eta3[a, ] = c(eta3, est_impvar3, est_compvar3)
+    rst.eta4[a, ] = c(eta4, est_impvar4, est_compvar4)
     
-    if(a%%10==0){
+    if(a%%100==0){
       print(a)
       cat("______eta1__________",'\n')
-      print(apply(rst.eta1[1:a,],2,mean))
-      print(apply(rst.eta1[1:a,],2,sd))
+      print(round(apply(rst.eta1[1:a,],2,mean), 5))
+      print(round(apply(rst.eta1[1:a,],2,sd), 5))
       cat("______eta2__________",'\n')
-      print(apply(rst.eta2[1:a,],2,mean))
-      print(apply(rst.eta2[1:a,],2,sd))
+      print(round(apply(rst.eta2[1:a,],2,mean), 5))
+      print(round(apply(rst.eta2[1:a,],2,sd), 5))
       cat("______eta3__________",'\n')
-      print(apply(rst.eta3[1:a,],2,mean))
-      print(apply(rst.eta3[1:a,],2,sd))
+      print(round(apply(rst.eta3[1:a,],2,mean), 5))
+      print(round(apply(rst.eta3[1:a,],2,sd), 5))
       cat("______eta4__________",'\n')
-      print(apply(rst.eta4[1:a,],2,mean))
-      print(apply(rst.eta4[1:a,],2,sd))
+      print(round(apply(rst.eta4[1:a,],2,mean), 5))
+      print(round(apply(rst.eta4[1:a,],2,sd), 5))
     }
   }
 }
