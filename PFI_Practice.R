@@ -119,30 +119,26 @@ myPFI_prac <- function(n, beta, sigma, phi, M=100, max.iter=50, eps=1e-09, B=200
                               colSums(matrix(idat$weight*idat$score_6_ij, nrow=M))), nrow=6, byrow=T)
     first_term <- solve(tcrossprod(score_mean_i))*n
     
-    double_sig_eta1 <- 0
-    for (i in 1:n){
-      score_ij <- matrix(c(idat$score_1_ij[idat$id==i], 
-                           idat$score_2_ij[idat$id==i], 
-                           idat$score_3_ij[idat$id==i], 
-                           idat$score_4_ij[idat$id==i], 
-                           idat$score_5_ij[idat$id==i], 
-                           idat$score_6_ij[idat$id==i]), nrow=6, byrow=T)
-      double_sig_eta1 = double_sig_eta1 + apply(rep(c(idat$weight[idat$id==i]*idat$y1_mis[idat$id==i]), each=6)*(score_ij-score_mean_i[, i]), 1, sum) ## g(y) ????
-    }
-    double_sig_eta1 <- double_sig_eta1/n
+    # Calculate double sigma w_iw_{ij}^{*}(s-s_{i})*g(y_{ij}^{*}) for eta1
+    common_term <- idat$weight*idat$y1_mis
+    c1 <- sum(common_term*(idat$score_1_ij-rep(score_mean_i[1, ], each=M)))
+    c2 <- sum(common_term*(idat$score_2_ij-rep(score_mean_i[2, ], each=M)))
+    c3 <- sum(common_term*(idat$score_3_ij-rep(score_mean_i[3, ], each=M)))
+    c4 <- sum(common_term*(idat$score_4_ij-rep(score_mean_i[4, ], each=M)))
+    c5 <- sum(common_term*(idat$score_5_ij-rep(score_mean_i[5, ], each=M)))
+    c6 <- sum(common_term*(idat$score_6_ij-rep(score_mean_i[6, ], each=M)))
+    double_sig_eta1 <- c(c1, c2, c3, c4, c5, c6)/n
     
     K_1_eta1 <- first_term%*%double_sig_eta1
-    K_1_eta1
-    e_i_eta1 <- matrix(NA, nrow=n, ncol=1)
-    for(l in 1:n){
-      score_ij <- matrix(c(idat$score_1_ij[idat$id==l], 
-                           idat$score_2_ij[idat$id==l], 
-                           idat$score_3_ij[idat$id==l], 
-                           idat$score_4_ij[idat$id==l], 
-                           idat$score_5_ij[idat$id==l], 
-                           idat$score_6_ij[idat$id==l]), nrow=6, byrow=T)
-      e_i_eta1[l, ] <- sum(idat$weight[idat$id==l]*(idat$y1_mis[idat$id==l]+t(K_1_eta1)%*%score_ij)) # ó��?? g(y_ij)?ڸ?
-    }
+    
+    # Calculate e_i term
+    score_mat <- matrix(c(idat$score_1_ij,
+                          idat$score_2_ij,
+                          idat$score_3_ij,
+                          idat$score_4_ij,
+                          idat$score_5_ij,
+                          idat$score_6_ij), byrow=T, nrow=6)
+    e_i_eta1 <- matrix(colSums(matrix(idat$weight*(idat$y1_mis+crossprod(K_1_eta1, score_mat)), nrow=M)), ncol=1)
     
     ### estimate for eta1 ###
     eta1 <- sum(idat$weight*idat$y1_mis)/n  # point estimator of eta1
@@ -287,5 +283,4 @@ myPFI_prac <- function(n, beta, sigma, phi, M=100, max.iter=50, eps=1e-09, B=200
       print(apply(rst.eta4[1:a,],2,sd))
     }
   }
-  return(rst.beta)
 }
