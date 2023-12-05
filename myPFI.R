@@ -1,4 +1,4 @@
-myPFI <- function(data, M=100, max.iter=50, eps=1e-09, B=2000){
+myPFI <- function(n, beta, sigma, phi, M=100, max.iter=50, eps=1e-09, B=2000){
   
   # Data generation
   source('Data_generation.R')
