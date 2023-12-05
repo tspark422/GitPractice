@@ -2,11 +2,9 @@ myPFI <- function(n, beta, sigma, phi, M=100, max.iter=50, eps=1e-09, B=2000){
   
   # Data generation
   source('Data_generation.R')
-  rst.beta <- matrix(0, nrow=B, ncol=length(beta))
-  rst.sigma <- rep(0, B)
-  rst.phi <- matrix(0, nrow=B, ncol=length(phi))
   rst.eta1 <- matrix(0, nrow=B, ncol=3)
   rst.eta2 <- matrix(0, nrow=B, ncol=3)
+  rst.eta3 <- matrix(0, nrow=B, ncol=3)
   rst.eta4 <- matrix(0, nrow=B, ncol=3)
   
   for (a in 1:B){
@@ -267,30 +265,22 @@ myPFI <- function(n, beta, sigma, phi, M=100, max.iter=50, eps=1e-09, B=2000){
       }
     }
     
-    rst.beta[a, ] = beta_new
-    rst.sigma[a] = sigma2_new
-    rst.phi[a, ] = phi_new
     rst.eta1[a, ] = c(eta1, est_impvar1, est_compvar1)
     rst.eta2[a, ] = c(eta2, est_impvar2, est_compvar2)
+    rst.eta3[a, ] = c(beta_new[1], est_impvar2, est_compvar2)
     rst.eta4[a, ] = round(c(eta4, est_impvar4, est_compvar4), 5)
     
     if(a%%10==0){
       print(a)
-      cat("______beta__________",'\n')
-      print(apply(rst.beta[1:a,],2,mean))
-      print(apply(rst.beta[1:a,],2,sd))
-      cat("______sigma__________",'\n')
-      print(mean(rst.sigma[1:a]))
-      print(sd(rst.sigma[1:a]))
-      cat("______pi__________",'\n')
-      print(apply(rst.phi[1:a,],2,mean))
-      print(apply(rst.phi[1:a,],2,sd))
       cat("______eta1__________",'\n')
       print(apply(rst.eta1[1:a,],2,mean))
       print(apply(rst.eta1[1:a,],2,sd))
       cat("______eta2__________",'\n')
       print(apply(rst.eta2[1:a,],2,mean))
       print(apply(rst.eta2[1:a,],2,sd))
+      cat("______eta3__________",'\n')
+      print(apply(rst.eta3[1:a,],2,mean))
+      print(apply(rst.eta3[1:a,],2,sd))
       cat("______eta4__________",'\n')
       print(apply(rst.eta4[1:a,],2,mean))
       print(apply(rst.eta4[1:a,],2,sd))
