@@ -97,6 +97,8 @@ myPFI_prac <- function(n, beta, sigma, phi, M=100, max.iter=50, eps=1e-09, B=200
     }
 
     ### Variance estimate ###
+    
+    # Define score function (S(theta))
     pi_cali_old <- exp(phi_new[1]+phi_new[2]*idat$x+phi_new[3]*idat$y1_mis)/(1+exp(phi_new[1]+phi_new[2]*idat$x+phi_new[3]*idat$y1_mis))
     score_1_ij <- idat$y1_mis-beta_new[1]-beta_new[2]*idat$x
     score_2_ij <- (idat$y1_mis-beta_new[1]-beta_new[2]*idat$x)*idat$x
@@ -106,16 +108,16 @@ myPFI_prac <- function(n, beta, sigma, phi, M=100, max.iter=50, eps=1e-09, B=200
     score_6_ij <- (idat$y2_mis-pi_cali_old)*idat$y1_mis
     idat$score_1_ij <- score_1_ij; idat$score_2_ij <- score_2_ij; idat$score_3_ij <- score_3_ij; idat$score_4_ij <- score_4_ij; idat$score_5_ij <- score_5_ij; idat$score_6_ij <- score_6_ij
     
-    score_mean_i <- matrix(NA, nrow=6, ncol=n)
-    for (m in 1:n){
-      score_mean_i[, m] <- matrix(c(sum(idat$weight[idat$id==m]*idat$score_1_ij[idat$id==m]),
-                                    sum(idat$weight[idat$id==m]*idat$score_2_ij[idat$id==m]),
-                                    sum(idat$weight[idat$id==m]*idat$score_3_ij[idat$id==m]),
-                                    sum(idat$weight[idat$id==m]*idat$score_4_ij[idat$id==m]),
-                                    sum(idat$weight[idat$id==m]*idat$score_5_ij[idat$id==m]),
-                                    sum(idat$weight[idat$id==m]*idat$score_6_ij[idat$id==m])), nrow=6)
-    }
-    first_term <- solve(score_mean_i%*%t(score_mean_i)/n)
+    # Define \bar{s_{i}^{*}} by 6 by n matrix
+    # Each column represents each sample
+    # Each row represents score function
+    score_mean_i <- matrix(c(colSums(matrix(idat$weight*idat$score_1_ij, nrow=M)),
+                              colSums(matrix(idat$weight*idat$score_2_ij, nrow=M)),
+                              colSums(matrix(idat$weight*idat$score_3_ij, nrow=M)),
+                              colSums(matrix(idat$weight*idat$score_4_ij, nrow=M)),
+                              colSums(matrix(idat$weight*idat$score_5_ij, nrow=M)),
+                              colSums(matrix(idat$weight*idat$score_6_ij, nrow=M))), nrow=6, byrow=T)
+    first_term <- solve(tcrossprod(score_mean_i))*n
     
     double_sig_eta1 <- 0
     for (i in 1:n){
